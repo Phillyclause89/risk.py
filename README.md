@@ -1,2 +1,2 @@
 # risk.py
-My attempt at coding the logic needed to play the board game risk.
+My attempt at coding the logic needed to play the board game risk. Right now the game is played using text commands inputed into the console. The current build is still pending logic needed to detect a win condition and the code for the fortifying turn.  After I have this project in a state where a full game of risk can be played, I hope to make some rl bots that will try to learn how play it. 
