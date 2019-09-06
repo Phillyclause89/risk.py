@@ -190,7 +190,7 @@ def board_set_up(first_pick_n, max_players, player_dict, map_dict):
                     if choice_cont is None:
                         print("Invalid input. Please copy and paste an open territory into the console")
                 player_key = player_dict["PLAYER_{}".format(pid)]
-                occupy(map_dict[choice_cont][choice], player_key, player_dict)
+                occupy(map_dict[choice_cont][choice], player_key, player_dict, max_players)
                 troop_placement(player_key, map_dict[choice_cont][choice], 1)
             else:
                 break
@@ -239,15 +239,24 @@ def board_set_up(first_pick_n, max_players, player_dict, map_dict):
     return pid
 
 
-def occupy(country, player_id, player_dict):
-    if country["occupier"] is not None:
-        loser = country.get("occupier")
-        loser = loser.replace(" ", "_").upper()
-        player_dict[loser]["territories"] -= 1
+def occupy(country, player_id, player_dict, max_players):
     occupier = player_id.get("name")
+    loser_stars = 0
+    if country["occupier"] is not None:
+        loser_n = country.get("occupier")
+        loser = loser_n.replace(" ", "_").upper()
+        player_dict[loser]["territories"] -= 1
+        if player_dict[loser]["territories"] <= 0:
+            loser_stars = player_dict[loser].get("stars")
+            print("{} lost their last territory. {} collects an additional {} stars from {}'s bank".format(loser_n,
+                                                                                                           occupier,
+                                                                                                           loser_stars,
+                                                                                                           loser_n))
+            max_players -= 1
     country["occupier"] = occupier
     occupier = occupier.replace(" ", "_").upper()
     player_dict[occupier]["territories"] += 1
+    player_dict[occupier]["stars"] += loser_stars
 
 
 def troop_placement(player_bank, in_country, troops):
@@ -305,7 +314,7 @@ def play(first_pick_n, max_players, player_dict, map_dict, deck_arr):
                                     deploy = int(input(
                                         "{} please enter the amount of troops you wish to deploy (Max = {}) \n".format(
                                             player_name, player["troops"])))
-                                    if 0 >= deploy <= player["troops"]:
+                                    if 0 <= deploy <= player["troops"]:
                                         deployment = deploy
                                         choice_cont = cont
                                     else:
@@ -333,7 +342,8 @@ def play(first_pick_n, max_players, player_dict, map_dict, deck_arr):
                                         if terr_b == bt and map_dict[cont_b][terr_b].get("occupier") != player_name:
                                             neighbors.append(
                                                 "{} (Defenders: {})".format(bt, map_dict[cont_b][terr_b].get("troops")))
-                                            n_values.append([cont_b, bt, map_dict[cont_b][terr_b].get("troops")])
+                                            n_values.append([cont_b, bt, map_dict[cont_b][terr_b].get("troops"),
+                                                            map_dict[cont_b][terr_b].get("occupier")])
                             if len(n_values) > 0:
                                 attacker_dict.update({terr: dict(cont=cont, troops=map_dict[cont][terr]["troops"],
                                                                  p_boarders=neighbors, v_boarders=n_values,
@@ -433,9 +443,9 @@ def play(first_pick_n, max_players, player_dict, map_dict, deck_arr):
                                             pid, card[0], card[1]))
                                     earned_card = True
                                 player_key = player_dict["PLAYER_{}".format(pid)]
-                                occupy(map_dict[defend_cont][d_terr], player_key, player_dict)
+                                occupy(map_dict[defend_cont][d_terr], player_key, player_dict, max_players)
                                 transfer_min = a_survivors
-                                transfer_max = attackers - transfer_min
+                                transfer_max = (attackers - transfer_min)
                                 print("{} troops survived the final invasion wave and must stay in {}.".format(
                                     transfer_min, d_terr))
                                 print(
@@ -447,7 +457,7 @@ def play(first_pick_n, max_players, player_dict, map_dict, deck_arr):
                                         transfer_request = int(input(
                                             "Enter how many addional troops you would like to transfer (Max = {}) \n".format(
                                                 transfer_max)))
-                                        if 0 >= transfer_request > transfer_max:
+                                        if 0 > transfer_request > transfer_max:
                                             raise ValueError
                                         break
                                     except ValueError:
