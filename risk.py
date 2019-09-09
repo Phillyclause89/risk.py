@@ -289,7 +289,7 @@ def play(first_pick_n, max_players, player_dict, map_dict, deck_arr):
             stars = player.get("stars")
             if stars > 0:
                 trade_in = input(
-                    "PLAYER {}, you have {} stars available. Would you like to exchange them [Y/N]".format(pid, stars))
+                    "PLAYER {}, you have {} stars available. Would you like to exchange them [Y/N]\n".format(pid, stars))
                 if trade_in == "Y" or trade_in == "YES" or trade_in == "yes" or trade_in == "y" or trade_in == "Yes":
                     player["stars"], troop_pool = trade_stars(stars, troop_pool)
             player["troops"] = troop_pool
@@ -523,7 +523,7 @@ def cont_bonus(p, md):
 def main(t):
     deck = deck_set_up(t)
     players = {}
-    p = int(input("Enter 2 to 6 players:"))
+    p = int(input("Enter 2 to 6 players:\n"))
     create_player_dict(p, players)
     first_pick = np.random.randint(1, p + 1)
     first_pick = board_set_up(first_pick, p, players, t)
