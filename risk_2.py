@@ -206,7 +206,7 @@ class CreateDict:
         return {1: 1, 2: 3, 3: 5, 4: 7, 5: 9, 6: 11, 7: 13}
 
     @staticmethod
-    def attacker(t_dict,p_dict,pnp):
+    def attacker(t_dict, p_dict, pnp):
         p_name = p_dict[pnp]["name"]
         attacker_dict = {}
         for terr in t_dict:
@@ -215,14 +215,10 @@ class CreateDict:
                 for bt in t_dict[terr]["boarders"]:
                     for terr_b in t_dict:
                         if terr_b == bt and t_dict[terr_b]["occupier"] != p_name:
-                            neighbors.append(bt)
+                            neighbors.append([bt, t_dict[terr_b]["occupier"], t_dict[terr_b]["troops"]])
                 if len(neighbors) > 0:
                     attacker_dict.update({terr: neighbors})
         return attacker_dict
-
-
-
-
 
 
 class Prompts:
@@ -260,7 +256,7 @@ class Prompts:
         return winners_list
 
     @staticmethod
-    def display_terrs(t_dict, hide_occ=False, player=None, troop_min=0, attack=False):
+    def display_terrs(t_dict, hide_occ=False, player=None, troop_min=0, attack=False, transfer=False):
         conts = CreateDict.continents()
         for cont in conts:
             bonus = conts[cont]
@@ -277,6 +273,13 @@ class Prompts:
                                 s = "{} ({} troops: {})".format(b, t_dict[b]["occupier"], t_dict[b]["troops"])
                                 boarders += s
                             elif t_dict[b]["occupier"] != player:
+                                s = ", {} ({} troops: {})".format(b, t_dict[b]["occupier"], t_dict[b]["troops"])
+                                boarders += s
+                        elif transfer:
+                            if boarders == "" and t_dict[b]["occupier"] == player:
+                                s = "{} ({} troops: {})".format(b, t_dict[b]["occupier"], t_dict[b]["troops"])
+                                boarders += s
+                            elif t_dict[b]["occupier"] == player:
                                 s = ", {} ({} troops: {})".format(b, t_dict[b]["occupier"], t_dict[b]["troops"])
                                 boarders += s
                         elif boarders == "":
@@ -296,14 +299,21 @@ class Prompts:
                                 " " * (3 - len(str(troops))),
                                 boarders))
                     elif player is not None:
+                        if attack:
+                            btag = "Hostile"
+                        elif transfer:
+                            btag = "Friendly"
+                        else:
+                            btag = ""
                         if occ == player and troops >= troop_min:
-                            print("{}{}Occupier: {}{}Troops: {}{}Boarders: {}".format(
+                            print("{}{}Occupier: {}{}Troops: {}{}{} Boarders: {}".format(
                                 terr,
                                 " " * (17 - len(terr)),
                                 occ,
                                 " " * (10 - len(str(occ))),
                                 troops,
                                 " " * (3 - len(str(troops))),
+                                btag,
                                 boarders))
                     else:
                         print("{}{}Occupier: {}{}Troops: {}{}Boarders: {}".format(
@@ -398,6 +408,51 @@ class Prompts:
         else:
             return True
 
+    @staticmethod
+    def attacker(attacker_dict, name):
+        while True:
+            try:
+                request = input(
+                    "{} please enter a territory to attack from or enter DONE to end attack phase.\n".format(
+                        name))
+                if request == "D" or request == "d" or request == "DONE" or request == "Done" or request == "done":
+                    print("Ending attack phase..")
+                    return request, 0
+
+                for terr in attacker_dict:
+                    if terr == request:
+                        print("\n{} can attack:\n--------------".format(request))
+                        b_list = []
+                        for b in attacker_dict[terr]:
+                            b_list.append(b[0])
+                            print("{}{}occupier: {} troops: {}".format(b[0], " " * (17 - len(b[0])), b[1], b[2]))
+                        while True:
+                            try:
+                                request_b = input("\n{} please enter a territory to attack.\n".format(name))
+                                if request_b in b_list:
+                                    return request, request_b
+                                raise ValueError
+                            except ValueError:
+                                print("\nError: {} is not a valid territory name that you can attack.\n".format(
+                                    request_b))
+                raise ValueError
+            except ValueError:
+                print("\nError: {} is not a valid territory name that you can attack from.\n".format(request))
+
+    @staticmethod
+    def attacker_force(att_terr, def_terr, t_dict, p_name):
+        attacker_cap = t_dict[att_terr]["troops"] - 1
+        while True:
+            try:
+                attackers = input("{} can attack {} with a maximum of {} troops from {}. \n Enter how many troops you "
+                                  "want to send on this attack\n".format(p_name, def_terr, attacker_cap, att_terr))
+                attackers = int(attackers)
+                if 0 <= attackers <= attacker_cap:
+                    return attackers
+                raise ValueError
+            except ValueError:
+                print(
+                    "\nError: {} is not a valid amount of troops that you can use for this attack.\n".format(attackers))
 
 
 def pnp_turner(pnp, p_count):
@@ -529,18 +584,127 @@ def add_banked_troops(p_dict, t_dict, pnp):
     return p_dict
 
 
+def battle(t_dict, p_dict, att_terr, def_terr, attackers):
+    t_dict[att_terr]["troops"] -= attackers
+    wave = 1
+    while attackers > 0 and t_dict[def_terr]["troops"] > 0:
+        print("Wave: {}".format(wave))
+        wave += 1
+        print("Attacking Troops: {} Defending Troops: {}".format(attackers, t_dict[def_terr]["troops"]))
+        if attackers >= 3 and t_dict[def_terr]["troops"] >= 2:
+            a_rolls = np.random.randint(1, 7, size=3)
+            d_rolls = np.random.randint(1, 7, size=2)
+        elif attackers == 2 and t_dict[def_terr]["troops"] >= 2:
+            a_rolls = np.random.randint(1, 7, size=2)
+            d_rolls = np.random.randint(1, 7, size=2)
+        elif attackers == 1 and t_dict[def_terr]["troops"] >= 2:
+            a_rolls = np.random.randint(1, 7, size=1)
+            d_rolls = np.random.randint(1, 7, size=2)
+        elif attackers == 1 and t_dict[def_terr]["troops"] == 1:
+            a_rolls = np.random.randint(1, 7, size=1)
+            d_rolls = np.random.randint(1, 7, size=1)
+        elif attackers == 2 and t_dict[def_terr]["troops"] == 1:
+            a_rolls = np.random.randint(1, 7, size=2)
+            d_rolls = np.random.randint(1, 7, size=1)
+        elif attackers >= 3 and t_dict[def_terr]["troops"] == 1:
+            a_rolls = np.random.randint(1, 7, size=3)
+            d_rolls = np.random.randint(1, 7, size=1)
+        a_rolls = np.sort(a_rolls)[::-1]
+        a_survivors = len(a_rolls)
+        d_rolls = np.sort(d_rolls)[::-1]
+        print("Attacker Rolls: {}".format(a_rolls))
+        print("Defender Rolls: {}".format(d_rolls))
+        for i in range(0, min([len(a_rolls), len(d_rolls)])):
+            if a_rolls[i] > d_rolls[i]:
+                t_dict[def_terr]["troops"] -= 1
+            else:
+                attackers -= 1
+                a_survivors -= 1
+    return t_dict, p_dict, attackers, a_survivors
+
+
+def get_loser_id(loser_name, p_dict):
+    for p in p_dict:
+        if p_dict[p]["name"] == loser_name:
+            return p_dict[p]["id"]
+
+
+def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card, att_terr, def_terr, p_name):
+    if t_dict[def_terr]["troops"] == 0:
+        print("{} captured {}!".format(p_name, def_terr))
+        if not earned_card:
+            card_i = np.random.randint(0, len(deck))
+            card = deck[card_i]
+            deck.pop(card_i)
+            p_dict[pnp]["stars"] += card[1]
+            print(
+                "\n{} draws the {} card! {} star(s) have been added to their bank.\n".format(
+                    p_name, card[0], card[1]))
+            earned_card = True
+        loser_name = t_dict[def_terr]["occupier"]
+        loser_id = get_loser_id(loser_name, p_dict)
+        p_dict[loser_id]["territories"] -= 1
+        loser_stars = 0
+        if p_dict[loser_id]["territories"] <= 0:
+            loser_stars = p_dict[loser_id]["stars"]
+            print("{} lost their last territory. {} collects an additional {} stars from {}'s bank".format(loser_name,
+                                                                                                           p_name,
+                                                                                                           loser_stars,
+                                                                                                           loser_name))
+        t_dict[def_terr]["occupier"] = p_name
+        p_dict[pnp]["territories"] += 1
+        p_dict[pnp]["stars"] += loser_stars
+        transfer_min = a_survivors
+        transfer_max = (attackers - transfer_min)
+        print("{} troops survived the final invasion wave and must stay in {}.".format(transfer_min, def_terr))
+        print("{} has {} reserve invasion troops that can be transferred to {}".format(p_name, transfer_max, def_terr))
+        if transfer_max > 0:
+            while True:
+                try:
+                    transfer_request = int(input(
+                        "Enter how many additional troops you would like to transfer (Max = {}) \n".format(transfer_max)))
+                    if 0 > transfer_request > transfer_max:
+                        raise ValueError
+                    break
+                except ValueError:
+                    print("Invalid input!")
+        else:
+            transfer_request = 0
+        t_dict[att_terr]["troops"] += attackers - (transfer_request + transfer_min)
+        t_dict[def_terr]["troops"] = transfer_request + transfer_min
+        print("Troops transferred. {} now has {} troops in {} and {} remain in {}".format(p_name, t_dict[def_terr]["troops"], def_terr,t_dict[att_terr]["troops"], att_terr))
+    elif attackers == 0:
+        print("Player {} failed to capture {}!".format(p_name, def_terr))
+    return t_dict, p_dict, deck, earned_card
+
+
 def attack_stage(t_dict, p_dict, pnp, deck):
     can_attack = True
     earned_card = False
     while can_attack:
-        attacker_dict = CreateDict.attacker(t_dict,p_dict,pnp)
+        attacker_dict = CreateDict.attacker(t_dict, p_dict, pnp)
         if len(attacker_dict) > 0:
             p_name = p_dict[pnp]["name"]
             Prompts.display_terrs(t_dict, player=p_name, troop_min=2, attack=True)
-            
-            print(attacker_dict)
-            input()
+            att_terr, def_terr = Prompts.attacker(attacker_dict, p_name)
+            if def_terr == 0:
+                can_attack = False
+            else:
+                attackers = Prompts.attacker_force(att_terr, def_terr, t_dict, p_name)
+                t_dict, p_dict, attackers, a_survivors = battle(t_dict, p_dict, att_terr, def_terr, attackers)
+                t_dict, p_dict, deck, earned_card = battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck,
+                                                                  earned_card, att_terr, def_terr, p_name)
+        else:
+            print("{} has no valid territories to attack from, skipping attack phase.".format(p_name))
+            can_attack = False
+    return t_dict, p_dict, deck
 
+
+def fortify_stage(t_dict, p_dict, pnp):
+    p_name = p_dict[pnp]["name"]
+    Prompts.display_terrs(t_dict, player=p_name,troop_min=2,transfer=True)
+    # terr_in, terr_out = Prompts.
+    input() #Pause loop
 
 
 def play(t_dict, p_dict, pnp, p_count, deck):
@@ -549,8 +713,8 @@ def play(t_dict, p_dict, pnp, p_count, deck):
             auto_save_save(t_dict, p_dict, pnp, p_count, deck)
             p_dict = add_banked_troops(p_dict, t_dict, pnp)
             t_dict, p_dict = deploy_additional_troops(t_dict, p_dict, pnp, turner=False, battle=True)
-            t_dict, p_dict = attack_stage(t_dict, p_dict, pnp, deck)
-            t_dict, p_dict = reinforcemet_stage(t_dict, p_dict, pnp)
+            t_dict, p_dict, deck = attack_stage(t_dict, p_dict, pnp, deck)
+            t_dict, p_dict = fortify_stage(t_dict, p_dict, pnp)
         pnp = pnp_turner(pnp, p_count)
 
 
