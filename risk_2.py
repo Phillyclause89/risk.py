@@ -220,6 +220,21 @@ class CreateDict:
                     attacker_dict.update({terr: neighbors})
         return attacker_dict
 
+    @staticmethod
+    def transfer(t_dict, p_dict, pnp):
+        p_name = p_dict[pnp]["name"]
+        transfer_dict = {}
+        for terr in t_dict:
+            if t_dict[terr]["occupier"] == p_name and t_dict[terr]["troops"] > 1:
+                neighbors = []
+                for bt in t_dict[terr]["boarders"]:
+                    for terr_b in t_dict:
+                        if terr_b == bt and t_dict[terr_b]["occupier"] == p_name:
+                            neighbors.append([bt, t_dict[terr_b]["occupier"], t_dict[terr_b]["troops"]])
+                if len(neighbors) > 0:
+                    transfer_dict.update({terr: neighbors})
+        return transfer_dict
+
 
 class Prompts:
     @staticmethod
@@ -227,14 +242,14 @@ class Prompts:
     # Example: p_count = Prompts.player_count()
     def player_count():
         while True:
-            p_count = input("Enter a number from 2 to 6 in order to set the number of players:\n")
+            p_count = input("\nEnter a number from 2 to 6 in order to set the number of players:\n")
             try:
                 p_count = int(p_count)
                 if 2 <= p_count <= 6:
                     return p_count
                 raise ValueError
             except ValueError:
-                print("Error: {} is an invalid entry for player count.\n".format(p_count))
+                print("\nError: {} is an invalid entry for player count.\n".format(p_count))
 
     @staticmethod
     def goes_first(player_in_play, high_roll):
@@ -252,7 +267,7 @@ class Prompts:
                 winners += winner[1]
             else:
                 winners += (" & " + winner[1])
-        print("{} tied the highest roll of [{}]\n".format(winners, high_roll))
+        print("\n{} tied the highest roll of [{}]\n".format(winners, high_roll))
         return winners_list
 
     @staticmethod
@@ -260,7 +275,7 @@ class Prompts:
         conts = CreateDict.continents()
         for cont in conts:
             bonus = conts[cont]
-            print("\n{}\nContinent Bonus: {} troops per turn".format(cont, bonus))
+            print("\n{}\nContinent bonus: {} troops per turn".format(cont, bonus))
             print("-----------------")
             for terr in t_dict:
                 if t_dict[terr]["cont"] == cont:
@@ -301,20 +316,41 @@ class Prompts:
                     elif player is not None:
                         if attack:
                             btag = "Hostile"
+                            if occ == player and troops >= troop_min and len(boarders) > 0:
+                                print("{}{}Occupier: {}{}Troops: {}{}{} Boarders: {}".format(
+                                    terr,
+                                    " " * (17 - len(terr)),
+                                    occ,
+                                    " " * (10 - len(str(occ))),
+                                    troops,
+                                    " " * (3 - len(str(troops))),
+                                    btag,
+                                    boarders))
                         elif transfer:
                             btag = "Friendly"
+                            if occ == player and troops >= troop_min and len(boarders) > 0:
+                                print("{}{}Occupier: {}{}Troops: {}{}{} Boarders: {}".format(
+                                    terr,
+                                    " " * (17 - len(terr)),
+                                    occ,
+                                    " " * (10 - len(str(occ))),
+                                    troops,
+                                    " " * (3 - len(str(troops))),
+                                    btag,
+                                    boarders))
                         else:
                             btag = ""
-                        if occ == player and troops >= troop_min:
-                            print("{}{}Occupier: {}{}Troops: {}{}{} Boarders: {}".format(
-                                terr,
-                                " " * (17 - len(terr)),
-                                occ,
-                                " " * (10 - len(str(occ))),
-                                troops,
-                                " " * (3 - len(str(troops))),
-                                btag,
-                                boarders))
+                            if occ == player and troops >= troop_min:
+                                print("{}{}Occupier: {}{}Troops: {}{}{} Boarders: {}".format(
+                                    terr,
+                                    " " * (17 - len(terr)),
+                                    occ,
+                                    " " * (10 - len(str(occ))),
+                                    troops,
+                                    " " * (3 - len(str(troops))),
+                                    btag,
+                                    boarders))
+
                     else:
                         print("{}{}Occupier: {}{}Troops: {}{}Boarders: {}".format(
                             terr,
@@ -340,7 +376,7 @@ class Prompts:
                     return claim
                 raise ValueError
             except ValueError:
-                print("Error: {} is not a claimable territory name.".format(claim))
+                print("\nError: {} is not a claimable territory name.\n".format(claim))
 
     @staticmethod
     def select_terr(t_dict, p_name):
@@ -350,12 +386,12 @@ class Prompts:
                 selectable.append(t)
         while True:
             try:
-                selection = input("{} enter a territory name to supply with additional troops \n".format(p_name))
+                selection = input("\n{} enter a territory name to supply with additional troops \n".format(p_name))
                 if selection in selectable:
                     return selection
                 raise ValueError
             except ValueError:
-                print("Error: {} is not a territory under your control.".format(selection))
+                print("\nError: {} is not a territory under your control.\n".format(selection))
 
     @staticmethod
     def troop_level(p_dict, pnp, p_name, target, minimum=1):
@@ -363,17 +399,17 @@ class Prompts:
         while True:
             try:
                 level = input(
-                    "{} Enter the amount of troops you would like to transfer to {} [Min: {} Max: {}]\n".format(p_name,
+                    "\n{} Enter the amount of troops you would like to transfer to {} [Min: {} Max: {}]\n".format(p_name,
                                                                                                                 target,
                                                                                                                 minimum,
                                                                                                                 troop_cap))
                 level = int(level)
                 if minimum <= level <= troop_cap:
-                    print("{} troops transferred to {}".format(level, target))
+                    print("\n{} troops transferred to {}\n".format(level, target))
                     return level
                 raise ValueError
             except ValueError:
-                print("Error: {} is not a valid amount of troops".format(level))
+                print("\nError: {} is not a valid amount of troops\n".format(level))
 
     @staticmethod
     def star_trade(stars, p_name):
@@ -395,13 +431,13 @@ class Prompts:
                         return stars_out, troops_in
                     raise ValueError
                 except ValueError:
-                    print("Error: {} is not a valid entry.".format(s))
+                    print("\nError: {} is not a valid entry.\n".format(s))
         else:
             return stars_out, troops_in
 
     @staticmethod
     def load_autosave():
-        confirm = input("An autosave file was found would you like to load it? [Y/N]\n(Warning: Starting a new game "
+        confirm = input("\nAn autosave file was found would you like to load it? [Y/N]\n(Warning: Starting a new game "
                         "will overwrite the autosave file)\n")
         if confirm == "No" or confirm == "NO" or confirm == "no" or confirm == "n" or confirm == "N":
             return False
@@ -409,14 +445,60 @@ class Prompts:
             return True
 
     @staticmethod
+    def transfer(transfer_dict, name):
+        while True:
+            try:
+                request = input(
+                    "\n{} please enter a territory to transfer troops from or enter DONE to end the reinforcement phase.\n".format(
+                        name))
+                if request == "D" or request == "d" or request == "DONE" or request == "Done" or request == "done":
+                    print("\nEnding reinforcement phase..\n")
+                    return request, 0
+                for terr in transfer_dict:
+                    if terr == request:
+                        print("\n{} can reinforce:\n--------------".format(request))
+                        b_list = []
+                        for b in transfer_dict[terr]:
+                            b_list.append(b[0])
+                            print("{}{}troops: {}".format(b[0], " " * (17 - len(b[0])), b[2]))
+                        while True:
+                            try:
+                                request_b = input("\n{} please enter a territory to transfer troops to.\n".format(name))
+                                if request_b in b_list:
+                                    return request, request_b
+                                raise ValueError
+                            except ValueError:
+                                print(
+                                    "\nError: {} is not a valid territory name that you can transfer troops to.\n".format(
+                                        request_b))
+                raise ValueError
+            except ValueError:
+                print("\nError: {} is not a valid territory name that you can transfer troops to.\n".format(request))
+
+    @staticmethod
+    def transfer_count(terr_out, terr_in, t_dict, p_name):
+        transfer_cap = t_dict[terr_out]["troops"] - 1
+        while True:
+            try:
+                request = input("\n{} can transfer a maximum of {} troops from {} to {}. \n Enter how many troops you "
+                                "want to transfer:\n".format(p_name, transfer_cap, terr_out, terr_in))
+                request = int(request)
+                if 0 <= request <= transfer_cap:
+                    return request
+                raise ValueError
+            except ValueError:
+                print(
+                    "\nError: {} is not a valid amount of troops that you can transfer.\n".format(request))
+
+    @staticmethod
     def attacker(attacker_dict, name):
         while True:
             try:
                 request = input(
-                    "{} please enter a territory to attack from or enter DONE to end attack phase.\n".format(
+                    "\n{} please enter a territory to attack from or enter DONE to end attack phase.\n".format(
                         name))
                 if request == "D" or request == "d" or request == "DONE" or request == "Done" or request == "done":
-                    print("Ending attack phase..")
+                    print("\nEnding attack phase..\n")
                     return request, 0
 
                 for terr in attacker_dict:
@@ -444,7 +526,7 @@ class Prompts:
         attacker_cap = t_dict[att_terr]["troops"] - 1
         while True:
             try:
-                attackers = input("{} can attack {} with a maximum of {} troops from {}. \n Enter how many troops you "
+                attackers = input("\n{} can attack {} with a maximum of {} troops from {}. \n Enter how many troops you "
                                   "want to send on this attack\n".format(p_name, def_terr, attacker_cap, att_terr))
                 attackers = int(attackers)
                 if 0 <= attackers <= attacker_cap:
@@ -662,7 +744,8 @@ def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card
             while True:
                 try:
                     transfer_request = int(input(
-                        "Enter how many additional troops you would like to transfer (Max = {}) \n".format(transfer_max)))
+                        "Enter how many additional troops you would like to transfer (Max = {}) \n".format(
+                            transfer_max)))
                     if 0 > transfer_request > transfer_max:
                         raise ValueError
                     break
@@ -672,7 +755,11 @@ def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card
             transfer_request = 0
         t_dict[att_terr]["troops"] += attackers - (transfer_request + transfer_min)
         t_dict[def_terr]["troops"] = transfer_request + transfer_min
-        print("Troops transferred. {} now has {} troops in {} and {} remain in {}".format(p_name, t_dict[def_terr]["troops"], def_terr,t_dict[att_terr]["troops"], att_terr))
+        print("Troops transferred. {} now has {} troops in {} and {} remain in {}".format(p_name,
+                                                                                          t_dict[def_terr]["troops"],
+                                                                                          def_terr,
+                                                                                          t_dict[att_terr]["troops"],
+                                                                                          att_terr))
     elif attackers == 0:
         print("Player {} failed to capture {}!".format(p_name, def_terr))
     return t_dict, p_dict, deck, earned_card
@@ -701,10 +788,18 @@ def attack_stage(t_dict, p_dict, pnp, deck):
 
 
 def fortify_stage(t_dict, p_dict, pnp):
+    transfer_dict = CreateDict.transfer(t_dict, p_dict, pnp)
     p_name = p_dict[pnp]["name"]
-    Prompts.display_terrs(t_dict, player=p_name,troop_min=2,transfer=True)
-    # terr_in, terr_out = Prompts.
-    input() #Pause loop
+    if len(transfer_dict) > 0:
+        Prompts.display_terrs(t_dict, player=p_name, troop_min=2, transfer=True)
+        terr_out, terr_in = Prompts.transfer(transfer_dict, p_name)
+        if terr_in != 0:
+            transfer_count = Prompts.transfer_count(terr_out, terr_in, t_dict, p_name)
+            t_dict[terr_out]["troops"] -= transfer_count
+            t_dict[terr_in]["troops"] += transfer_count
+    else:
+        print("{} has no valid territories to transfer troops from, skipping fortify phase.".format(p_name))
+    return t_dict, p_dict
 
 
 def play(t_dict, p_dict, pnp, p_count, deck):
@@ -716,6 +811,8 @@ def play(t_dict, p_dict, pnp, p_count, deck):
             t_dict, p_dict, deck = attack_stage(t_dict, p_dict, pnp, deck)
             t_dict, p_dict = fortify_stage(t_dict, p_dict, pnp)
         pnp = pnp_turner(pnp, p_count)
+    winner = t_dict["JAPAN"]["occupier"]
+    print("{} won the game!".format(winner))
 
 
 def auto_save_load():
