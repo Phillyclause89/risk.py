@@ -48,7 +48,7 @@ class CreateDict:
                     boarders=["NW_TERRITORY", "W_USA", "ALBERTA", "QUEBEC", "GREENLAND", "E_USA"],
                     stars=2),
                 QUEBEC=dict(
-                    boarders=["NW_TERRITORY", "W_USA", "ALBERTA", "QUEBEC", "GREENLAND", "E_USA"],
+                    boarders=["NW_TERRITORY", "W_USA", "ALBERTA", "GREENLAND", "E_USA"],
                     stars=1),
                 W_USA=dict(
                     boarders=["CENTRAL_AMERICA", "ALBERTA", "QUEBEC", "E_USA", "ONTARIO"],
