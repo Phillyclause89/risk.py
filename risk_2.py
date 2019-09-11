@@ -176,7 +176,7 @@ class CreateDict:
     # Call to create and return the players dict.
     # Note: player_count must be between 2 and 6, use Prompts.player_count() to get and validate player_count)
     # Example: p_dict = CreateDict.players(p_count)
-    def players(player_count):
+    def players(player_count, bots):
         player_dict = {}
         if player_count == 2:
             t = 40
@@ -188,13 +188,22 @@ class CreateDict:
             t = 25
         else:
             t = 20
-        for player_id in range(1, player_count + 1):
+        for player_id in range(1, player_count - bots + 1):
             player_dict.update({player_id: dict(
                 name="Player {}".format(player_id),
                 troops=t,
                 stars=0,
                 territories=0,
-                id=player_id)})
+                id=player_id,
+                bot=False)})
+        for player_id in range(player_count - bots + 1, player_count + 1):
+            player_dict.update({player_id: dict(
+                name="Player {}".format(player_id),
+                troops=t,
+                stars=0,
+                territories=0,
+                id=player_id,
+                bot=True)})
         return player_dict
 
     @staticmethod
@@ -246,7 +255,14 @@ class Prompts:
             try:
                 p_count = int(p_count)
                 if 2 <= p_count <= 6:
-                    return p_count
+                    bots = input(
+                        "\nEnter a number from 0 to {} in order to set the number of bots:\n".format(p_count, p_count))
+                    try:
+                        bots = int(bots)
+                        if 0 < bots <= p_count:
+                            return p_count, bots
+                    except ValueError:
+                        print("\nError: {} is an invalid entry for bot count.\n".format(bots))
                 raise ValueError
             except ValueError:
                 print("\nError: {} is an invalid entry for player count.\n".format(p_count))
@@ -362,28 +378,35 @@ class Prompts:
                             boarders))
 
     @staticmethod
-    def claim_terr(p_dict, t_dict, pnp):
+    def claim_terr(p_dict, t_dict, pnp, bot_choice="Random"):
         claimable = []
         for t in t_dict:
             if t_dict[t]["occupier"] is None:
                 claimable.append(t)
         p_name = p_dict[pnp]["name"]
+        if p_dict[pnp]["bot"] and bot_choice == "Random":
+            claim = np.random.randint(0, len(claimable))
+            print("\n{} claims {}\n".format(p_name, claimable[claim]))
+            return claimable[claim]
         while True:
             try:
                 claim = input("\n{} enter a territory name to claim it \n".format(p_name))
                 if claim in claimable:
-                    print("{} claims {}".format(p_name, claim))
+                    print("\n{} claims {}\n".format(p_name, claim))
                     return claim
                 raise ValueError
             except ValueError:
                 print("\nError: {} is not a claimable territory name.\n".format(claim))
 
     @staticmethod
-    def select_terr(t_dict, p_name):
+    def select_terr(p_dict, t_dict, p_name, pnp, bot_choice="Random"):
         selectable = []
         for t in t_dict:
             if t_dict[t]["occupier"] == p_name:
                 selectable.append(t)
+        if p_dict[pnp]["bot"] and bot_choice == "Random":
+            selection = np.random.randint(0, len(selectable))
+            return selectable[selection]
         while True:
             try:
                 selection = input("\n{} enter a territory name to supply with additional troops \n".format(p_name))
@@ -394,15 +417,20 @@ class Prompts:
                 print("\nError: {} is not a territory under your control.\n".format(selection))
 
     @staticmethod
-    def troop_level(p_dict, pnp, p_name, target, minimum=1):
+    def troop_level(p_dict, pnp, p_name, target, minimum=1, bot_choice="Random"):
         troop_cap = p_dict[pnp]["troops"]
+        if p_dict[pnp]["bot"] and bot_choice == "Random":
+            selection = np.random.randint(1, troop_cap + 1)
+            print("\n{} troops transferred to {}\n".format(selection, target))
+            return selection
         while True:
             try:
                 level = input(
-                    "\n{} Enter the amount of troops you would like to transfer to {} [Min: {} Max: {}]\n".format(p_name,
-                                                                                                                target,
-                                                                                                                minimum,
-                                                                                                                troop_cap))
+                    "\n{} Enter the amount of troops you would like to transfer to {} [Min: {} Max: {}]\n".format(
+                        p_name,
+                        target,
+                        minimum,
+                        troop_cap))
                 level = int(level)
                 if minimum <= level <= troop_cap:
                     print("\n{} troops transferred to {}\n".format(level, target))
@@ -412,8 +440,14 @@ class Prompts:
                 print("\nError: {} is not a valid amount of troops\n".format(level))
 
     @staticmethod
-    def star_trade(stars, p_name):
+    def star_trade(stars, p_name, p_dict, pnp, bot_choice="Random"):
         stars_out, troops_in = 0, 0
+        if p_dict[pnp]["bot"] and bot_choice == "Random":
+            stars_out = np.random.randint(0, stars + 1)
+            troops_in = (2 * stars_out) - 1
+            if troops_in < 0:
+                troops_in = 0
+            return stars_out, troops_in
         confirm = input(
             "\n{}, you have {} stars available. Would you like to exchange them [Y/N]\n".format(p_name, stars))
         if confirm == "YES" or confirm == "YES" or confirm == "yes" or confirm == "y" or confirm == "Yes":
@@ -428,6 +462,8 @@ class Prompts:
                     if 0 <= s <= stars:
                         stars_out = s
                         troops_in = (2 * s) - 1
+                        if troops_in < 0:
+                            troops_in = 0
                         return stars_out, troops_in
                     raise ValueError
                 except ValueError:
@@ -526,8 +562,9 @@ class Prompts:
         attacker_cap = t_dict[att_terr]["troops"] - 1
         while True:
             try:
-                attackers = input("\n{} can attack {} with a maximum of {} troops from {}. \n Enter how many troops you "
-                                  "want to send on this attack\n".format(p_name, def_terr, attacker_cap, att_terr))
+                attackers = input(
+                    "\n{} can attack {} with a maximum of {} troops from {}. \n Enter how many troops you "
+                    "want to send on this attack\n".format(p_name, def_terr, attacker_cap, att_terr))
                 attackers = int(attackers)
                 if 0 <= attackers <= attacker_cap:
                     return attackers
@@ -584,8 +621,8 @@ def roll_to_go_first(player_dict):
 
 
 def claim_territories(terr_dict):
-    p_count = Prompts.player_count()
-    player_dict = CreateDict.players(p_count)
+    p_count, bots = Prompts.player_count()
+    player_dict = CreateDict.players(p_count, bots)
     pnp = roll_to_go_first(player_dict)
     while unclaimed_terrs(terr_dict):
         Prompts.display_terrs(terr_dict, hide_occ=True)
@@ -603,7 +640,7 @@ def deploy_additional_troops(t_dict, p_dict, pnp, player_max=6, turner=True, bat
         if p_dict[pnp]["troops"] > 0:
             p_name = p_dict[pnp]["name"]
             Prompts.display_terrs(t_dict, player=p_name)
-            deploy_target = Prompts.select_terr(t_dict, p_name)
+            deploy_target = Prompts.select_terr(p_dict, t_dict, p_name, pnp)
             if battle:
                 troop_target = Prompts.troop_level(p_dict, pnp, p_name, deploy_target, minimum=0)
             else:
@@ -651,7 +688,7 @@ def star_trade_in(p_dict, pnp):
     stars = p_dict[pnp]["stars"]
     p_name = p_dict[pnp]["name"]
     if stars > 0:
-        stars_out, troops_in = Prompts.star_trade(stars, p_name)
+        stars_out, troops_in = Prompts.star_trade(stars, p_name, p_dict, pnp)
         p_dict[pnp]["stars"] -= stars_out
         p_dict[pnp]["troops"] += troops_in
     return p_dict
@@ -765,7 +802,7 @@ def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card
     return t_dict, p_dict, deck, earned_card
 
 
-def attack_stage(t_dict, p_dict, pnp, deck):
+def attack_stage(t_dict, p_dict, pnp, deck, bot_choice="Random"):
     can_attack = True
     earned_card = False
     while can_attack:
@@ -773,6 +810,16 @@ def attack_stage(t_dict, p_dict, pnp, deck):
         if len(attacker_dict) > 0:
             p_name = p_dict[pnp]["name"]
             Prompts.display_terrs(t_dict, player=p_name, troop_min=2, attack=True)
+            if p_dict[pnp]["bot"] and bot_choice=="Random":
+                bot_choicees = []
+                for ater in attacker_dict:
+                    for dter in attacker_dict[dter]:
+                        bot_choicees.append([att_terr,def_terr])
+                        bot_choicees.append([0,0])
+                choice = np.random.randint(0,len(bot_choicees))
+                att_terr = bot_choicees[choice][0]
+                def_terr = bot_choicees[choice][1]
+
             att_terr, def_terr = Prompts.attacker(attacker_dict, p_name)
             if def_terr == 0:
                 can_attack = False
@@ -787,13 +834,27 @@ def attack_stage(t_dict, p_dict, pnp, deck):
     return t_dict, p_dict, deck
 
 
-def fortify_stage(t_dict, p_dict, pnp):
+def fortify_stage(t_dict, p_dict, pnp, bot_choice="Random"):
     transfer_dict = CreateDict.transfer(t_dict, p_dict, pnp)
     p_name = p_dict[pnp]["name"]
     if len(transfer_dict) > 0:
         Prompts.display_terrs(t_dict, player=p_name, troop_min=2, transfer=True)
-        terr_out, terr_in = Prompts.transfer(transfer_dict, p_name)
-        if terr_in != 0:
+        if p_dict[pnp]["bot"] and bot_choice == "Random":
+            bot_choices = []
+            for t_out in transfer_dict:
+                for t_in in transfer_dict[t_out]:
+                    bot_choices.append([t_out, t_in])
+            choice = np.random.randint(0, len(bot_choices))
+            terr_out = bot_choices[choice][0]
+            terr_in = bot_choices[choice][1]
+        else:
+            terr_out, terr_in = Prompts.transfer(transfer_dict, p_name)
+        if p_dict[pnp]["bot"] and bot_choice == "Random":
+            tran_max = t_dict[terr_out]["troops"]
+            transfer_count = np.random.randint(0, tran_max)
+            t_dict[terr_out]["troops"] -= transfer_count
+            t_dict[terr_in]["troops"] += transfer_count
+        elif terr_in != 0:
             transfer_count = Prompts.transfer_count(terr_out, terr_in, t_dict, p_name)
             t_dict[terr_out]["troops"] -= transfer_count
             t_dict[terr_in]["troops"] += transfer_count
