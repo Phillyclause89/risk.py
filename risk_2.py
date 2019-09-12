@@ -748,10 +748,10 @@ def get_loser_id(loser_name, p_dict):
             return p_dict[p]["id"]
 
 
-def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card, att_terr, def_terr, p_name):
+def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card, att_terr, def_terr, p_name, bot_choice="Random"):
     if t_dict[def_terr]["troops"] == 0:
         print("{} captured {}!".format(p_name, def_terr))
-        if not earned_card:
+        if not earned_card and len(deck) > 0:
             card_i = np.random.randint(0, len(deck))
             card = deck[card_i]
             deck.pop(card_i)
@@ -778,16 +778,19 @@ def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card
         print("{} troops survived the final invasion wave and must stay in {}.".format(transfer_min, def_terr))
         print("{} has {} reserve invasion troops that can be transferred to {}".format(p_name, transfer_max, def_terr))
         if transfer_max > 0:
-            while True:
-                try:
-                    transfer_request = int(input(
-                        "Enter how many additional troops you would like to transfer (Max = {}) \n".format(
-                            transfer_max)))
-                    if 0 > transfer_request > transfer_max:
-                        raise ValueError
-                    break
-                except ValueError:
-                    print("Invalid input!")
+            if p_dict[pnp]["bot"] and bot_choice == "Random":
+                transfer_request = np.random.randint(0,transfer_max+1)
+            else:
+                while True:
+                    try:
+                        transfer_request = int(input(
+                            "Enter how many additional troops you would like to transfer (Max = {}) \n".format(
+                                transfer_max)))
+                        if 0 > transfer_request > transfer_max:
+                            raise ValueError
+                        break
+                    except ValueError:
+                        print("Invalid input!")
         else:
             transfer_request = 0
         t_dict[att_terr]["troops"] += attackers - (transfer_request + transfer_min)
@@ -805,26 +808,29 @@ def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card
 def attack_stage(t_dict, p_dict, pnp, deck, bot_choice="Random"):
     can_attack = True
     earned_card = False
+    p_name = p_dict[pnp]["name"]
     while can_attack:
         attacker_dict = CreateDict.attacker(t_dict, p_dict, pnp)
         if len(attacker_dict) > 0:
-            p_name = p_dict[pnp]["name"]
             Prompts.display_terrs(t_dict, player=p_name, troop_min=2, attack=True)
             if p_dict[pnp]["bot"] and bot_choice=="Random":
                 bot_choicees = []
                 for ater in attacker_dict:
-                    for dter in attacker_dict[dter]:
-                        bot_choicees.append([att_terr,def_terr])
+                    for dter in attacker_dict[ater]:
+                        bot_choicees.append([ater, dter[0]])
                         bot_choicees.append([0,0])
                 choice = np.random.randint(0,len(bot_choicees))
                 att_terr = bot_choicees[choice][0]
                 def_terr = bot_choicees[choice][1]
-
-            att_terr, def_terr = Prompts.attacker(attacker_dict, p_name)
+            else:
+                att_terr, def_terr = Prompts.attacker(attacker_dict, p_name)
             if def_terr == 0:
                 can_attack = False
             else:
-                attackers = Prompts.attacker_force(att_terr, def_terr, t_dict, p_name)
+                if p_dict[pnp]["bot"] and bot_choice == "Random":
+                    attackers = np.random.randint(1, t_dict[att_terr]["troops"])
+                else:
+                    attackers = Prompts.attacker_force(att_terr, def_terr, t_dict, p_name)
                 t_dict, p_dict, attackers, a_survivors = battle(t_dict, p_dict, att_terr, def_terr, attackers)
                 t_dict, p_dict, deck, earned_card = battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck,
                                                                   earned_card, att_terr, def_terr, p_name)
@@ -843,9 +849,9 @@ def fortify_stage(t_dict, p_dict, pnp, bot_choice="Random"):
             bot_choices = []
             for t_out in transfer_dict:
                 for t_in in transfer_dict[t_out]:
-                    bot_choices.append([t_out, t_in])
+                    bot_choices.append([transfer_dict[t_out], t_in[0]])
             choice = np.random.randint(0, len(bot_choices))
-            terr_out = bot_choices[choice][0]
+            terr_out = bot_choices[choice][0][0][0]
             terr_in = bot_choices[choice][1]
         else:
             terr_out, terr_in = Prompts.transfer(transfer_dict, p_name)
