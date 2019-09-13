@@ -16,8 +16,9 @@ class Deck:
     # Call to draw a card from the deck array.
     # Example: deck, card = Deck.draw_card(deck)
     def draw_card(deck_arr):
-        if len(deck_arr) > 0:
-            card_i = np.random.randint(0, len(deck_arr))
+        deck_len = len(deck_arr)
+        if deck_len > 0:
+            card_i = np.random.randint(0, deck_len)
             c = deck_arr[card_i]
             deck_arr.pop(card_i)
         else:
@@ -702,7 +703,7 @@ def add_banked_troops(p_dict, t_dict, pnp):
     p_dict = star_trade_in(p_dict, pnp)
     return p_dict
 
-
+# Move print()s to Prompts.
 def battle(t_dict, p_dict, att_terr, def_terr, attackers):
     t_dict[att_terr]["troops"] -= attackers
     wave = 1
@@ -747,7 +748,7 @@ def get_loser_id(loser_name, p_dict):
         if p_dict[p]["name"] == loser_name:
             return p_dict[p]["id"]
 
-
+# Move print()s to Prompts.
 def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card, att_terr, def_terr, p_name, bot_choice="Random"):
     if t_dict[def_terr]["troops"] == 0:
         print("{} captured {}!".format(p_name, def_terr))
