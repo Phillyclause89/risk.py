@@ -102,3 +102,12 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+.idea/$CACHE_FILE$
+.idea/vcs.xml
+.idea/risk.py.iml
+.idea/modules.xml
+.idea/misc.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/dictionaries
+.idea/codeStyles/Project.xml
+.idea/codeStyles/codeStyleConfig.xml

@@ -703,6 +703,7 @@ def add_banked_troops(p_dict, t_dict, pnp):
     p_dict = star_trade_in(p_dict, pnp)
     return p_dict
 
+
 # Move print()s to Prompts.
 def battle(t_dict, p_dict, att_terr, def_terr, attackers):
     t_dict[att_terr]["troops"] -= attackers
@@ -748,8 +749,10 @@ def get_loser_id(loser_name, p_dict):
         if p_dict[p]["name"] == loser_name:
             return p_dict[p]["id"]
 
+
 # Move print()s to Prompts.
-def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card, att_terr, def_terr, p_name, bot_choice="Random"):
+def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card, att_terr, def_terr, p_name,
+                  bot_choice="Random"):
     if t_dict[def_terr]["troops"] == 0:
         print("{} captured {}!".format(p_name, def_terr))
         if not earned_card and len(deck) > 0:
@@ -780,7 +783,7 @@ def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card
         print("{} has {} reserve invasion troops that can be transferred to {}".format(p_name, transfer_max, def_terr))
         if transfer_max > 0:
             if p_dict[pnp]["bot"] and bot_choice == "Random":
-                transfer_request = np.random.randint(0,transfer_max+1)
+                transfer_request = np.random.randint(0, transfer_max + 1)
             else:
                 while True:
                     try:
@@ -814,13 +817,13 @@ def attack_stage(t_dict, p_dict, pnp, deck, bot_choice="Random"):
         attacker_dict = CreateDict.attacker(t_dict, p_dict, pnp)
         if len(attacker_dict) > 0:
             Prompts.display_terrs(t_dict, player=p_name, troop_min=2, attack=True)
-            if p_dict[pnp]["bot"] and bot_choice=="Random":
+            if p_dict[pnp]["bot"] and bot_choice == "Random":
                 bot_choicees = []
                 for ater in attacker_dict:
                     for dter in attacker_dict[ater]:
                         bot_choicees.append([ater, dter[0]])
-                        bot_choicees.append([0,0])
-                choice = np.random.randint(0,len(bot_choicees))
+                        bot_choicees.append([0, 0])
+                choice = np.random.randint(0, len(bot_choicees))
                 att_terr = bot_choicees[choice][0]
                 def_terr = bot_choicees[choice][1]
             else:
@@ -883,6 +886,13 @@ def play(t_dict, p_dict, pnp, p_count, deck):
     print("{} won the game!".format(winner))
 
 
+def auto_save_save(t_dict, p_dict, pnp, p_count, deck):
+    game_state = [t_dict, p_dict, pnp, p_count, deck]
+    pickle_out = open("autosave.pickle", "wb")
+    pickle.dump(game_state, pickle_out)
+    pickle_out.close()
+
+
 def auto_save_load():
     try:
         pickle_in = open("autosave.pickle", "rb")
@@ -894,18 +904,8 @@ def auto_save_load():
 
     except FileNotFoundError:
         t_dict, p_dict, pnp, p_count, deck = None, None, None, None, None
-        game_state = [t_dict, p_dict, pnp, p_count, deck]
-        pickle_out = open("autosave.pickle", "wb")
-        pickle.dump(game_state, pickle_out)
-        pickle_out.close()
+        auto_save_save(t_dict, p_dict, pnp, p_count, deck)
         return t_dict, p_dict, pnp, p_count, deck
-
-
-def auto_save_save(t_dict, p_dict, pnp, p_count, deck):
-    game_state = [t_dict, p_dict, pnp, p_count, deck]
-    pickle_out = open("autosave.pickle", "wb")
-    pickle.dump(game_state, pickle_out)
-    pickle_out.close()
 
 
 def main():
@@ -918,4 +918,5 @@ def main():
     play(t_dict, p_dict, pnp, p_count, deck)
 
 
-main()
+if __name__ == "__main__":
+    main()
