@@ -111,3 +111,4 @@ venv.bak/
 .idea/dictionaries
 .idea/codeStyles/Project.xml
 .idea/codeStyles/codeStyleConfig.xml
+.idea/workspace.xml
