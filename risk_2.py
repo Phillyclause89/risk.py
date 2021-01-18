@@ -2,35 +2,18 @@ import numpy as np
 import pickle
 
 
-class Deck:
-    @staticmethod
-    # Call to create and return deck array.
-    # Example: deck = Deck.set_up(t_dict)
-    def set_up(t_dict):
-        deck_arr = []
-        for terr in t_dict:
-            deck_arr.append([terr, t_dict[terr].get("stars")])
-        return deck_arr
-
-    @staticmethod
-    # Call to draw a card from the deck array.
-    # Example: deck, card = Deck.draw_card(deck)
-    def draw_card(deck_arr):
-        deck_len = len(deck_arr)
-        if deck_len > 0:
-            card_i = np.random.randint(0, deck_len)
-            c = deck_arr[card_i]
-            deck_arr.pop(card_i)
-        else:
-            c = ["There are no Cards left in the deck.", 0]
-        return deck_arr, c
-
-
 class CreateDict:
+    """
+
+    """
+
     @staticmethod
-    # Call to create and return  territories dict.
-    # Example: t_dict = CreateDict.territories()
     def territories():
+        """
+
+        Returns: dict
+
+        """
         territories = dict(
             NORTH_AMERICA=dict(
                 ALASKA=dict(
@@ -174,21 +157,21 @@ class CreateDict:
         return out
 
     @staticmethod
-    # Call to create and return the players dict.
-    # Note: player_count must be between 2 and 6, use Prompts.player_count() to get and validate player_count)
-    # Example: p_dict = CreateDict.players(p_count)
-    def players(player_count, bots):
+    def players(player_count: int, bots: int, t_lookup=None) -> dict:
+        """
+
+        Args:
+            t_lookup: dict or None
+            player_count: int
+            bots: int
+
+        Returns: dict
+
+        """
+        if t_lookup is None:
+            t_lookup = {2: 40, 3: 35, 4: 30, 5: 25, 6: 20}
         player_dict = {}
-        if player_count == 2:
-            t = 40
-        elif player_count == 3:
-            t = 35
-        elif player_count == 4:
-            t = 30
-        elif player_count == 5:
-            t = 25
-        else:
-            t = 20
+        t = t_lookup[player_count]
         for player_id in range(1, player_count - bots + 1):
             player_dict.update({player_id: dict(
                 name="Player {}".format(player_id),
@@ -208,15 +191,45 @@ class CreateDict:
         return player_dict
 
     @staticmethod
-    def continents():
-        return {"NORTH_AMERICA": 5, "SOUTH_AMERICA": 2, "AFRICA": 3, "EUROPE": 5, "ASIA": 7, "OCEANIA": 2}
+    def continents(continents=None) -> dict:
+        """
+
+        Args:
+            continents: dict
+
+        Returns: dict
+
+        """
+        if continents is None:
+            continents = {"NORTH_AMERICA": 5, "SOUTH_AMERICA": 2, "AFRICA": 3, "EUROPE": 5, "ASIA": 7, "OCEANIA": 2}
+        return continents
 
     @staticmethod
-    def star_exchange_rate():
-        return {1: 1, 2: 3, 3: 5, 4: 7, 5: 9, 6: 11, 7: 13}
+    def star_exchange_rate(ser=None) -> dict:
+        """
+
+        Args:
+            ser: dict
+
+        Returns: dict
+
+        """
+        if ser is None:
+            ser = {1: 1, 2: 3, 3: 5, 4: 7, 5: 9, 6: 11, 7: 13}
+        return ser
 
     @staticmethod
-    def attacker(t_dict, p_dict, pnp):
+    def attacker(t_dict: dict, p_dict: dict, pnp: int) -> dict:
+        """
+
+        Args:
+            t_dict: dict
+            p_dict: dict
+            pnp: int
+
+        Returns: dict
+
+        """
         p_name = p_dict[pnp]["name"]
         attacker_dict = {}
         for terr in t_dict:
@@ -231,7 +244,17 @@ class CreateDict:
         return attacker_dict
 
     @staticmethod
-    def transfer(t_dict, p_dict, pnp):
+    def transfer(t_dict: dict, p_dict: dict, pnp: int) -> dict:
+        """
+
+        Args:
+            t_dict: dict
+            p_dict: dict
+            pnp: int
+
+        Returns: dict
+
+        """
         p_name = p_dict[pnp]["name"]
         transfer_dict = {}
         for terr in t_dict:
@@ -246,49 +269,155 @@ class CreateDict:
         return transfer_dict
 
 
+class Deck:
+    """
+
+    """
+    def __init__(self, t_dict: dict):
+        """
+
+        Args:
+            t_dict (dict[dict]):
+        """
+        self.deck = [(terr, t_dict[terr].get("stars")) for terr in t_dict]
+
+    def __len__(self) -> int:
+        """
+
+        Returns: int
+
+        """
+        return self.deck.__len__()
+
+    def __getitem__(self, item: int) -> object:
+        """
+
+        Args:
+            item: int
+
+        Returns: object
+
+        """
+        return self.deck[item]
+
+    def pop(self, item: int) -> object:
+        """
+
+        Args:
+            item: int
+
+        Returns: object
+
+        """
+        return self.deck.pop(item)
+
+    def draw_card(self, deck_arr=None) -> (list, tuple):
+        """
+
+        Args:
+            deck_arr (list):
+
+        Returns:
+
+        """
+        if deck_arr is None:
+            deck_arr = self.deck
+        deck_len = len(deck_arr)
+        if deck_len > 0:
+            card_i = np.random.randint(0, deck_len)
+            c = deck_arr[card_i]
+            deck_arr.pop(card_i)
+        else:
+            c = ("There are no Cards left in the deck.", 0)
+        self.deck = deck_arr
+        return deck_arr, c
+
+
 class Prompts:
+    """
+
+    """
     @staticmethod
-    # Call to prompt for and validate the users requested number of players.
-    # Example: p_count = Prompts.player_count()
-    def player_count():
+    def player_count() -> (int, int):
+        """
+
+        Returns: (int, int)
+
+        """
         while True:
             p_count = input("\nEnter a number from 2 to 6 in order to set the number of players:\n")
             try:
                 p_count = int(p_count)
                 if 2 <= p_count <= 6:
-                    bots = input(
-                        "\nEnter a number from 0 to {} in order to set the number of bots:\n".format(p_count, p_count))
-                    try:
-                        bots = int(bots)
-                        if 0 < bots <= p_count:
-                            return p_count, bots
-                    except ValueError:
-                        print("\nError: {} is an invalid entry for bot count.\n".format(bots))
+                    while True:
+                        bots = input(
+                            "\nEnter a number from 0 to {} in order to set the number of bots:\n".format(p_count, p_count))
+                        try:
+                            bots = int(bots)
+                            if 0 <= bots <= p_count:
+                                return p_count, bots
+                            raise ValueError
+                        except ValueError:
+                            print("\nError: {} is an invalid entry for bot count.\n".format(bots))
                 raise ValueError
             except ValueError:
                 print("\nError: {} is an invalid entry for player count.\n".format(p_count))
 
     @staticmethod
-    def goes_first(player_in_play, high_roll):
-        print("\n{} had the highest roll of [{}] and goes first.\n".format(player_in_play, high_roll))
+    def goes_first(player_name, high_roll):
+        """
+
+        Args:
+            player_name:
+            high_roll:
+
+        Returns:
+
+        """
+        print("\n{} had the highest roll of [{}] and goes first.\n".format(player_name, high_roll))
 
     @staticmethod
     def dice_roll(player_name, rolls):
+        """
+
+        Args:
+            player_name:
+            rolls:
+
+        Returns:
+
+        """
         print("{} rolls: [{}]".format(player_name, rolls))
 
     @staticmethod
     def tied_rollers(winners_list, high_roll):
-        winners = ""
-        for winner in winners_list:
-            if winners == "":
-                winners += winner[1]
-            else:
-                winners += (" & " + winner[1])
-        print("\n{} tied the highest roll of [{}]\n".format(winners, high_roll))
+        """
+
+        Args:
+            winners_list:
+            high_roll:
+
+        Returns:
+
+        """
+        print("\n{} tied the highest roll of [{}]\n".format(' & '.join(winners_list).strip(' & '), high_roll))
         return winners_list
 
     @staticmethod
     def display_terrs(t_dict, hide_occ=False, player=None, troop_min=0, attack=False, transfer=False):
+        """
+
+        Args:
+            t_dict:
+            hide_occ:
+            player:
+            troop_min:
+            attack:
+            transfer:
+
+        Returns:
+
+        """
         conts = CreateDict.continents()
         for cont in conts:
             bonus = conts[cont]
@@ -380,6 +509,17 @@ class Prompts:
 
     @staticmethod
     def claim_terr(p_dict, t_dict, pnp, bot_choice="Random"):
+        """
+
+        Args:
+            p_dict:
+            t_dict:
+            pnp:
+            bot_choice:
+
+        Returns:
+
+        """
         claimable = []
         for t in t_dict:
             if t_dict[t]["occupier"] is None:
@@ -401,6 +541,18 @@ class Prompts:
 
     @staticmethod
     def select_terr(p_dict, t_dict, p_name, pnp, bot_choice="Random"):
+        """
+
+        Args:
+            p_dict:
+            t_dict:
+            p_name:
+            pnp:
+            bot_choice:
+
+        Returns:
+
+        """
         selectable = []
         for t in t_dict:
             if t_dict[t]["occupier"] == p_name:
@@ -419,6 +571,19 @@ class Prompts:
 
     @staticmethod
     def troop_level(p_dict, pnp, p_name, target, minimum=1, bot_choice="Random"):
+        """
+
+        Args:
+            p_dict:
+            pnp:
+            p_name:
+            target:
+            minimum:
+            bot_choice:
+
+        Returns:
+
+        """
         troop_cap = p_dict[pnp]["troops"]
         if p_dict[pnp]["bot"] and bot_choice == "Random":
             selection = np.random.randint(1, troop_cap + 1)
@@ -442,6 +607,18 @@ class Prompts:
 
     @staticmethod
     def star_trade(stars, p_name, p_dict, pnp, bot_choice="Random"):
+        """
+
+        Args:
+            stars:
+            p_name:
+            p_dict:
+            pnp:
+            bot_choice:
+
+        Returns:
+
+        """
         stars_out, troops_in = 0, 0
         if p_dict[pnp]["bot"] and bot_choice == "Random":
             stars_out = np.random.randint(0, stars + 1)
@@ -474,6 +651,11 @@ class Prompts:
 
     @staticmethod
     def load_autosave():
+        """
+
+        Returns:
+
+        """
         confirm = input("\nAn autosave file was found would you like to load it? [Y/N]\n(Warning: Starting a new game "
                         "will overwrite the autosave file)\n")
         if confirm == "No" or confirm == "NO" or confirm == "no" or confirm == "n" or confirm == "N":
@@ -483,6 +665,15 @@ class Prompts:
 
     @staticmethod
     def transfer(transfer_dict, name):
+        """
+
+        Args:
+            transfer_dict:
+            name:
+
+        Returns:
+
+        """
         while True:
             try:
                 request = input(
@@ -514,6 +705,17 @@ class Prompts:
 
     @staticmethod
     def transfer_count(terr_out, terr_in, t_dict, p_name):
+        """
+
+        Args:
+            terr_out:
+            terr_in:
+            t_dict:
+            p_name:
+
+        Returns:
+
+        """
         transfer_cap = t_dict[terr_out]["troops"] - 1
         while True:
             try:
@@ -529,6 +731,15 @@ class Prompts:
 
     @staticmethod
     def attacker(attacker_dict, name):
+        """
+
+        Args:
+            attacker_dict:
+            name:
+
+        Returns:
+
+        """
         while True:
             try:
                 request = input(
@@ -560,6 +771,17 @@ class Prompts:
 
     @staticmethod
     def attacker_force(att_terr, def_terr, t_dict, p_name):
+        """
+
+        Args:
+            att_terr:
+            def_terr:
+            t_dict:
+            p_name:
+
+        Returns:
+
+        """
         attacker_cap = t_dict[att_terr]["troops"] - 1
         while True:
             try:
@@ -576,6 +798,15 @@ class Prompts:
 
 
 def pnp_turner(pnp, p_count):
+    """
+
+    Args:
+        pnp:
+        p_count:
+
+    Returns:
+
+    """
     if pnp == p_count:
         pnp = 1
     else:
@@ -584,6 +815,14 @@ def pnp_turner(pnp, p_count):
 
 
 def banked_troops(p_dict):
+    """
+
+    Args:
+        p_dict:
+
+    Returns:
+
+    """
     for pid in p_dict:
         if p_dict[pid]["troops"] > 0:
             return True
@@ -591,6 +830,14 @@ def banked_troops(p_dict):
 
 
 def unclaimed_terrs(terr_dict):
+    """
+
+    Args:
+        terr_dict:
+
+    Returns:
+
+    """
     for terr in terr_dict:
         if terr_dict[terr]["occupier"] is None:
             return True
@@ -598,6 +845,14 @@ def unclaimed_terrs(terr_dict):
 
 
 def roll_to_go_first(player_dict):
+    """
+
+    Args:
+        player_dict:
+
+    Returns:
+
+    """
     rollers = []
     for pid in player_dict:
         rollers.append([player_dict[pid].get("id"), player_dict[pid].get("name"), None])
@@ -622,6 +877,14 @@ def roll_to_go_first(player_dict):
 
 
 def claim_territories(terr_dict):
+    """
+
+    Args:
+        terr_dict:
+
+    Returns:
+
+    """
     p_count, bots = Prompts.player_count()
     player_dict = CreateDict.players(p_count, bots)
     pnp = roll_to_go_first(player_dict)
@@ -637,6 +900,19 @@ def claim_territories(terr_dict):
 
 
 def deploy_additional_troops(t_dict, p_dict, pnp, player_max=6, turner=True, battle=False):
+    """
+
+    Args:
+        t_dict:
+        p_dict:
+        pnp:
+        player_max:
+        turner:
+        battle:
+
+    Returns:
+
+    """
     while banked_troops(p_dict):
         if p_dict[pnp]["troops"] > 0:
             p_name = p_dict[pnp]["name"]
@@ -654,6 +930,14 @@ def deploy_additional_troops(t_dict, p_dict, pnp, player_max=6, turner=True, bat
 
 
 def no_winner(t_dict):
+    """
+
+    Args:
+        t_dict:
+
+    Returns:
+
+    """
     winner = None
     for t in t_dict:
         if winner is None:
@@ -664,6 +948,16 @@ def no_winner(t_dict):
 
 
 def cont_bonus(p_dict, t_dict, pnp):
+    """
+
+    Args:
+        p_dict:
+        t_dict:
+        pnp:
+
+    Returns:
+
+    """
     bonus = 0
     conts = CreateDict.continents()
     p_name = p_dict[pnp]["name"]
@@ -686,6 +980,15 @@ def cont_bonus(p_dict, t_dict, pnp):
 
 
 def star_trade_in(p_dict, pnp):
+    """
+
+    Args:
+        p_dict:
+        pnp:
+
+    Returns:
+
+    """
     stars = p_dict[pnp]["stars"]
     p_name = p_dict[pnp]["name"]
     if stars > 0:
@@ -696,6 +999,16 @@ def star_trade_in(p_dict, pnp):
 
 
 def add_banked_troops(p_dict, t_dict, pnp):
+    """
+
+    Args:
+        p_dict:
+        t_dict:
+        pnp:
+
+    Returns:
+
+    """
     p_dict[pnp]["troops"] = p_dict[pnp]["territories"] // 3
     if p_dict[pnp]["troops"] < 3:
         p_dict[pnp]["troops"] = 3
@@ -706,6 +1019,18 @@ def add_banked_troops(p_dict, t_dict, pnp):
 
 # Move print()s to Prompts.
 def battle(t_dict, p_dict, att_terr, def_terr, attackers):
+    """
+
+    Args:
+        t_dict:
+        p_dict:
+        att_terr:
+        def_terr:
+        attackers:
+
+    Returns:
+
+    """
     t_dict[att_terr]["troops"] -= attackers
     wave = 1
     while attackers > 0 and t_dict[def_terr]["troops"] > 0:
@@ -745,6 +1070,15 @@ def battle(t_dict, p_dict, att_terr, def_terr, attackers):
 
 
 def get_loser_id(loser_name, p_dict):
+    """
+
+    Args:
+        loser_name:
+        p_dict:
+
+    Returns:
+
+    """
     for p in p_dict:
         if p_dict[p]["name"] == loser_name:
             return p_dict[p]["id"]
@@ -753,6 +1087,24 @@ def get_loser_id(loser_name, p_dict):
 # Move print()s to Prompts.
 def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card, att_terr, def_terr, p_name,
                   bot_choice="Random"):
+    """
+
+    Args:
+        t_dict:
+        p_dict:
+        attackers:
+        a_survivors:
+        pnp:
+        deck:
+        earned_card:
+        att_terr:
+        def_terr:
+        p_name:
+        bot_choice:
+
+    Returns:
+
+    """
     if t_dict[def_terr]["troops"] == 0:
         print("{} captured {}!".format(p_name, def_terr))
         if not earned_card and len(deck) > 0:
@@ -810,6 +1162,18 @@ def battle_report(t_dict, p_dict, attackers, a_survivors, pnp, deck, earned_card
 
 
 def attack_stage(t_dict, p_dict, pnp, deck, bot_choice="Random"):
+    """
+
+    Args:
+        t_dict:
+        p_dict:
+        pnp:
+        deck:
+        bot_choice:
+
+    Returns:
+
+    """
     can_attack = True
     earned_card = False
     p_name = p_dict[pnp]["name"]
@@ -845,6 +1209,17 @@ def attack_stage(t_dict, p_dict, pnp, deck, bot_choice="Random"):
 
 
 def fortify_stage(t_dict, p_dict, pnp, bot_choice="Random"):
+    """
+
+    Args:
+        t_dict:
+        p_dict:
+        pnp:
+        bot_choice:
+
+    Returns:
+
+    """
     transfer_dict = CreateDict.transfer(t_dict, p_dict, pnp)
     p_name = p_dict[pnp]["name"]
     if len(transfer_dict) > 0:
@@ -874,6 +1249,18 @@ def fortify_stage(t_dict, p_dict, pnp, bot_choice="Random"):
 
 
 def play(t_dict, p_dict, pnp, p_count, deck):
+    """
+
+    Args:
+        t_dict:
+        p_dict:
+        pnp:
+        p_count:
+        deck:
+
+    Returns:
+
+    """
     while no_winner(t_dict):
         if p_dict[pnp]["territories"] > 0:
             auto_save_save(t_dict, p_dict, pnp, p_count, deck)
@@ -887,6 +1274,18 @@ def play(t_dict, p_dict, pnp, p_count, deck):
 
 
 def auto_save_save(t_dict, p_dict, pnp, p_count, deck):
+    """
+
+    Args:
+        t_dict:
+        p_dict:
+        pnp:
+        p_count:
+        deck:
+
+    Returns:
+
+    """
     game_state = [t_dict, p_dict, pnp, p_count, deck]
     pickle_out = open("autosave.pickle", "wb")
     pickle.dump(game_state, pickle_out)
@@ -894,12 +1293,18 @@ def auto_save_save(t_dict, p_dict, pnp, p_count, deck):
 
 
 def auto_save_load():
+    """
+
+    Returns:
+
+    """
     try:
         pickle_in = open("autosave.pickle", "rb")
         confirm = Prompts.load_autosave()
         if confirm:
             game_state = pickle.load(pickle_in)
-            return game_state[0], game_state[1], game_state[2], game_state[3], game_state[4]
+            pickle_in.close()
+            return game_state
         raise FileNotFoundError
 
     except FileNotFoundError:
@@ -909,10 +1314,15 @@ def auto_save_load():
 
 
 def main():
+    """
+
+    Returns:
+
+    """
     t_dict, p_dict, pnp, p_count, deck = auto_save_load()
     if pnp is None:
         t_dict = CreateDict.territories()
-        deck = Deck.set_up(t_dict)
+        deck = Deck(t_dict)
         t_dict, p_dict, pnp, p_count = claim_territories(t_dict)
         t_dict, p_dict = deploy_additional_troops(t_dict, p_dict, pnp, player_max=p_count)
     play(t_dict, p_dict, pnp, p_count, deck)
