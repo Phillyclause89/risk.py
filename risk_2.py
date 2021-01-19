@@ -273,6 +273,7 @@ class Deck:
     """
 
     """
+
     def __init__(self, t_dict: dict):
         """
 
@@ -337,6 +338,7 @@ class Prompts:
     """
 
     """
+
     @staticmethod
     def player_count() -> (int, int):
         """
@@ -351,7 +353,8 @@ class Prompts:
                 if 2 <= p_count <= 6:
                     while True:
                         bots = input(
-                            "\nEnter a number from 0 to {} in order to set the number of bots:\n".format(p_count, p_count))
+                            "\nEnter a number from 0 to {} in order to set the number of bots:\n".format(p_count,
+                                                                                                         p_count))
                         try:
                             bots = int(bots)
                             if 0 <= bots <= p_count:
@@ -628,7 +631,7 @@ class Prompts:
             return stars_out, troops_in
         confirm = input(
             "\n{}, you have {} stars available. Would you like to exchange them [Y/N]\n".format(p_name, stars))
-        if confirm == "YES" or confirm == "YES" or confirm == "yes" or confirm == "y" or confirm == "Yes":
+        if confirm.lower() in ("y", "yes"):
             exchange_map = CreateDict.star_exchange_rate()
             print("Stars available to trade: {}".format(stars))
             for i in exchange_map:
@@ -658,7 +661,7 @@ class Prompts:
         """
         confirm = input("\nAn autosave file was found would you like to load it? [Y/N]\n(Warning: Starting a new game "
                         "will overwrite the autosave file)\n")
-        if confirm == "No" or confirm == "NO" or confirm == "no" or confirm == "n" or confirm == "N":
+        if confirm.lower() in ("no", "n"):
             return False
         else:
             return True

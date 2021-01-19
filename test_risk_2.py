@@ -153,7 +153,14 @@ def random_td_pd(p, b):
     for t in td:
         td[t]["troops"] = randint(1, 2)
         td[t]["occupier"] = pd[randint(1, p)]["name"]
+    for p in pd:
+        pd[p]["stars"] = randint(1, 10)
     return td, pd
+
+
+def get_c_iter():
+    from risk_2 import CreateDict
+    return iter([c for c in CreateDict.territories()])
 
 
 class TestPrompts(TestCase):
@@ -163,20 +170,17 @@ class TestPrompts(TestCase):
 
     def test_player_count(self):
         with patch('builtins.input', mock_valid_input_p_count):
-            while True:
-                try:
-                    p, b = self.p.player_count()
-                    self.assertIsInstance(p, int)
-                    self.assertIsInstance(b, int)
-                    self.assertTrue(2 <= p <= 6)
-                    self.assertTrue(0 <= b <= p)
-                except StopIteration:
-                    break
-        with patch('builtins.input', mock_invalid_input_p_count):
-            with patch('sys.stdout') as out:
+            while not StopIteration:
                 p, b = self.p.player_count()
-                self.assertEqual(p, 6)
-                self.assertEqual(b, 6)
+                self.assertIsInstance(p, int)
+                self.assertIsInstance(b, int)
+                self.assertTrue(2 <= p <= 6)
+                self.assertTrue(0 <= b <= p)
+
+        with patch('builtins.input', mock_invalid_input_p_count), patch('sys.stdout') as out:
+            p, b = self.p.player_count()
+            self.assertEqual(p, 6)
+            self.assertEqual(b, 6)
             errs = []
             for e in get_ips_iter():
                 if e != "6":
@@ -234,36 +238,171 @@ class TestPrompts(TestCase):
             ]:
                 self.assertEqual(t_dict[c[0]]["occupier"], c[1].lstrip("Occupier: "))
                 self.assertGreater(t_dict[c[0]]["troops"], 1)
-                self.assertEqual(t_dict[c[0]]["troops"],int(c[2].lstrip("Troops: ")))
-            #     print(c)
-            # 
-            # with patch('sys.stdout') as out:
-            #     self.p.display_terrs(t_dict, hide_occ=True)
-            #
-            # with patch('sys.stdout') as out:
-            #     self.p.display_terrs(t_dict, player=p_name)
-            #
-            # with patch('sys.stdout') as out:
-            #     self.p.display_terrs(t_dict, player=p_name, troop_min=2, transfer=True)
+                self.assertEqual(t_dict[c[0]]["troops"], int(c[2].lstrip("Troops: ")))
+            with patch('sys.stdout') as out:
+                self.p.display_terrs(t_dict, hide_occ=True)
+            self.assertEqual(len(out.mock_calls), 6 * 4)
+            with patch('sys.stdout') as out:
+                self.p.display_terrs(t_dict, player=p_name)
+            for c in [
+                re.split(
+                    r'\s{2,}', str(s).lstrip("call.write('").rstrip("')")
+                ) for s in out.mock_calls if "Occupier:" in str(s)
+            ]:
+                self.assertEqual(t_dict[c[0]]["occupier"], c[1].lstrip("Occupier: "))
+            with patch('sys.stdout') as out:
+                self.p.display_terrs(t_dict, player=p_name, troop_min=2, transfer=True)
+            for c in [
+                re.split(
+                    r'\s{2,}', str(s).lstrip("call.write('").rstrip("')")
+                ) for s in out.mock_calls if "Occupier:" in str(s)
+            ]:
+                self.assertEqual(t_dict[c[0]]["occupier"], c[1].lstrip("Occupier: "))
+                self.assertGreater(t_dict[c[0]]["troops"], 1)
 
-#
-#     def test_claim_terr(self):
-#         self.fail()
-#
-#     def test_select_terr(self):
-#         self.fail()
-#
-#     def test_troop_level(self):
-#         self.fail()
-#
-#     def test_star_trade(self):
-#         self.fail()
-#
-#     def test_load_autosave(self):
-#         self.fail()
-#
-#     def test_transfer(self):
-#         self.fail()
+    def test_claim_terr(self):
+        from risk_2 import CreateDict
+        for p, b, pp in get_p_b_pp():
+            player_dict = CreateDict.players(p, b)
+            terr_dict = CreateDict.territories()
+            c_iter = get_c_iter()
+
+            def mock_valid_input_claim_terr(prompt):
+                if "enter a territory name to claim it" in prompt.lower():
+                    n = next(c_iter)
+                    return n
+
+            for c in terr_dict:
+                with patch('builtins.input', mock_valid_input_claim_terr), patch('sys.stdout') as out:
+                    claim = self.p.claim_terr(player_dict, terr_dict, pp)
+                    self.assertIn(f"Player {pp} claims {claim}", str(out.mock_calls))
+                if not player_dict[pp]["bot"]:
+                    self.assertEqual(claim, c)
+
+    def test_select_terr(self):
+        for p, b, pp in get_p_b_pp():
+            t_dict, p_dict = random_td_pd(p, b)
+            valid_c_ls = [c for c in t_dict if t_dict[c]["occupier"] == p_dict[pp]["name"]]
+            c_iter = iter(valid_c_ls)
+
+            def mock_valid_input_transfer_terrs(prompt):
+                return next(c_iter)
+
+            while not StopIteration:
+                with patch("builtins.input", mock_valid_input_transfer_terrs):
+                    deploy_target = self.p.select_terr(p_dict, t_dict, p_dict[pp]["name"], pp)
+                    self.assertIsInstance(deploy_target, str)
+                    self.assertIn(deploy_target, t_dict)
+            invalid_iter = iter(["INVALID INPUT"] + [valid_c_ls[0]])
+            with patch("builtins.input", lambda _: next(invalid_iter)), patch("sys.stdout") as out:
+                self.p.select_terr(p_dict, t_dict, p_dict[pp]["name"], pp)
+            if not p_dict[pp]["bot"]:
+                self.assertIn("Error: INVALID INPUT is not a territory under your control.", str(out.mock_calls))
+
+    def test_troop_level(self):
+        for p, b, pp in get_p_b_pp():
+            t_dict, p_dict = random_td_pd(p, b)
+            pn = p_dict[pp]["name"]
+            mt = p_dict[pp]["troops"]
+            for t in t_dict:
+                for i in range(mt + 1):
+                    def mock_valid_troop_level_input(prompt):
+                        if f"{pn} Enter the amount of troops you would like to transfer to {t} [Min: 0 Max: {mt}]" in prompt:
+                            return i
+                        self.fail()
+
+                    with patch("builtins.input", mock_valid_troop_level_input), patch("sys.stdout") as out:
+                        troop_target = self.p.troop_level(p_dict, pp, pn, t, minimum=0)
+                    if not p_dict[pp]["bot"]:
+                        self.assertEqual(troop_target, i)
+                    else:
+                        self.assertTrue(0 <= troop_target <= mt)
+                    self.assertIn(f"{troop_target} troops transferred to {t}", str(out.mock_calls))
+            invalid_ls = ["-1", "Nonumerical", "420.69", str(mt + 1), "  ", "/n", "1"]
+            invalid_iter = iter(invalid_ls)
+
+            def mock_invalid_troop_input(prompt):
+                return next(invalid_iter)
+
+            if not p_dict[pp]["bot"]:
+                with patch("builtins.input", mock_invalid_troop_input), patch("sys.stdout") as out:
+                    troop_target = self.p.troop_level(p_dict, pp, pn, t, minimum=0)
+                self.assertEqual(troop_target, 1)
+                for bad_input in iter(invalid_ls[:-1]):
+                    self.assertIn(f"Error: {bad_input} is not a valid amount of troops", str(out.mock_calls))
+            quick_check_ls = ["0", "1"]
+            quick_check_iter = iter(quick_check_ls)
+            with patch("builtins.input", lambda _: next(quick_check_iter)), patch("sys.stdout") as out:
+                troop_target = self.p.troop_level(p_dict, pp, pn, t)
+            if not p_dict[pp]["bot"]:
+                self.assertEqual(troop_target, 1)
+                self.assertIn(f"Error: 0 is not a valid amount of troops", str(out.mock_calls))
+            self.assertIsInstance(troop_target, int)
+
+    def test_star_trade(self):
+        y_ls = ["Y", "Yes", "yes", "y", "YES"]
+        ex_ls = ["N", "BLAHH", "0"]
+        for p, b, pp in get_p_b_pp():
+            t_dict, p_dict = random_td_pd(p, b)
+            valid_stars_ls = [str(x) for x in range(p_dict[pp]["stars"] + 1)]
+            valid_stars_iter = iter(valid_stars_ls)
+            y_iter = iter(y_ls * 2)
+            star_check = 0
+
+            def mock_valid_star_input(prompt):
+                if "Would you like to exchange them [Y/N]" in prompt:
+                    return next(y_iter)
+                if "Enter the amount of stars you would like to trade in:" in prompt:
+                    return next(valid_stars_iter)
+
+            while not StopIteration:
+                with patch("builtins.input", mock_valid_star_input), patch("sys.stdout"):
+                    stars_out, troops_in = self.p.star_trade(p_dict[pp]["stars"], p_dict[pp]["name"], p_dict, pp)
+                self.assertIsInstance(stars_out, int)
+                self.assertIsInstance(troops_in, int)
+                if not p_dict[pp]["bot"]:
+                    self.assertEqual(stars_out, star_check)
+            ex_input_iter = iter(ex_ls)
+
+            def mock_exit_input(prompt):
+                return next(ex_input_iter)
+
+            while not StopIteration:
+                with patch("builtins.input", mock_exit_input), patch("sys.stdout"):
+                    stars_out, troops_in = self.p.star_trade(p_dict[pp]["stars"], p_dict[pp]["name"], p_dict, pp)
+                if not p_dict[pp]["bot"]:
+                    self.assertEqual(stars_out, 0)
+                    self.assertEqual(troops_in, 0)
+
+            invalid_in_ls = ["-1", str(p_dict[pp]["stars"] + 1), "NONUMERICAL", "\n", "0"]
+            invalid_in_iter = iter(invalid_in_ls)
+
+            def mock_invalid_star_input(prompt):
+                if "Would you like to exchange them [Y/N]" in prompt:
+                    return "Y"
+                if "Enter the amount of stars you would like to trade in:" in prompt:
+                    return next(invalid_in_iter)
+                self.fail()
+
+            with patch("builtins.input", mock_invalid_star_input), patch("sys.stdout") as out:
+                stars_out, troops_in = self.p.star_trade(p_dict[pp]["stars"], p_dict[pp]["name"], p_dict, pp)
+                if not p_dict[pp]["bot"]:
+                    self.assertEqual(stars_out, 0)
+                    self.assertEqual(troops_in, 0)
+                    self.assertIn("is not a valid entry.", str(out.mock_calls))
+
+    def test_load_autosave(self):
+        for y in ("Y", "y", "YES", "Yes", "yes"):
+            with patch("builtins.input", lambda _: y):
+                confirm = self.p.load_autosave()
+                self.assertTrue(confirm)
+        for n in ("N", "No", "NO", "no", "n"):
+            with patch("builtins.input", lambda _: n):
+                confirm = self.p.load_autosave()
+                self.assertFalse(confirm)
+
+    # def test_transfer(self):
+    #     self.fail()
 #
 #     def test_transfer_count(self):
 #         self.fail()
